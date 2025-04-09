@@ -10,6 +10,9 @@ const config = {
   browserlessApiKey: process.env.BROWSERLESS_API_KEY
 };
 
+// Add this helper function at the top
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
 async function checkSiteStructure() {
   let browser = null;
   

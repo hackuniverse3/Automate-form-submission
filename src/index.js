@@ -7,6 +7,9 @@ const puppeteer = require('puppeteer-core');
 // Load environment variables
 dotenv.config();
 
+// Helper function for delays
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
 // Config
 const config = {
   port: process.env.PORT || 3000,
@@ -58,11 +61,21 @@ class TCVSService {
       console.log('Form found, filling fields...');
       
       // Use the correct selectors based on our analysis
+      // Add small delays between interactions to mimic human behavior
       await page.type('#issue_date', formData.issueDate);
+      await delay(300);
+      
       await page.type('#symbol_number', formData.symbol);
+      await delay(300);
+      
       await page.type('#serial_number', formData.serial);
+      await delay(300);
+      
       await page.type('#amount', formData.checkAmount);
+      await delay(300);
+      
       await page.type('#bank_rtn', formData.rtn);
+      await delay(500);
       
       console.log('Form filled, submitting...');
       
@@ -72,10 +85,18 @@ class TCVSService {
         throw new Error('Could not find submit button');
       }
       
-      await submitButton.click();
+      // Try waiting for navigation and clicking simultaneously
+      try {
+        await Promise.all([
+          page.waitForNavigation({ timeout: 10000 }).catch(e => console.log('Navigation timeout, continuing...')),
+          submitButton.click()
+        ]);
+      } catch (e) {
+        console.log('Error during form submission, trying to continue:', e.message);
+      }
       
-      // Wait for response
-      await page.waitForTimeout(5000);
+      // Wait for some time to let the page process the submission
+      await delay(5000);
       
       console.log('Form submitted, capturing result...');
       
@@ -86,15 +107,33 @@ class TCVSService {
         console.log('Could not take screenshot:', e.message);
       }
       
-      // Extract result text
+      // Try to get the current URL first
+      const currentUrl = await page.url();
+      console.log('Current URL after submission:', currentUrl);
+      
+      // Extract any visible result text
       const resultText = await page.evaluate(() => {
-        return document.body.textContent;
+        // Try some common result selectors
+        const resultSelectors = [
+          '.alert', '.message', '.result', '.success', '.error',
+          'div[role="alert"]', '.notification'
+        ];
+        
+        for (const selector of resultSelectors) {
+          const el = document.querySelector(selector);
+          if (el && el.textContent) return el.textContent.trim();
+        }
+        
+        // If no specific message container found, try to get a relevant part of the page
+        const bodyText = document.body.textContent;
+        return bodyText ? bodyText.substring(0, 1000) + '...' : 'No text content found';
       });
       
       return {
         success: true,
         message: 'Form submitted successfully',
         data: {
+          currentUrl,
           result: resultText || 'No specific result text found'
         }
       };
