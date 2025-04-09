@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
 const dotenv = require('dotenv');
-const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer-core');
 
 // Load environment variables
 dotenv.config();
@@ -11,7 +11,8 @@ dotenv.config();
 const config = {
   port: process.env.PORT || 3000,
   nodeEnv: process.env.NODE_ENV || 'development',
-  tcvsUrl: process.env.TCVS_URL || 'https://tcvs.fiscal.treasury.gov/'
+  tcvsUrl: process.env.TCVS_URL || 'https://tcvs.fiscal.treasury.gov/',
+  browserlessApiKey: process.env.BROWSERLESS_API_KEY
 };
 
 // TCVS Service class
@@ -25,22 +26,17 @@ class TCVSService {
     let browser = null;
 
     try {
-      // Launch browser with specific options for Vercel serverless environment
-      browser = await puppeteer.launch({
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-accelerated-2d-canvas',
-          '--no-first-run',
-          '--no-zygote',
-          '--single-process',
-          '--disable-gpu'
-        ],
-        headless: "new"
+      // Connect to Browserless.io
+      const browserWSEndpoint = `wss://chrome.browserless.io?token=${config.browserlessApiKey}`;
+      
+      browser = await puppeteer.connect({
+        browserWSEndpoint,
       });
       
       const page = await browser.newPage();
+      
+      // Set viewport
+      await page.setViewport({ width: 1280, height: 800 });
       
       // Navigate to the TCVS website
       await page.goto(config.tcvsUrl, { waitUntil: 'networkidle2' });
