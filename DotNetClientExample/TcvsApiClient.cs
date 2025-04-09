@@ -155,11 +155,11 @@ namespace TcvsIntegration
 
             // Submit form to TCVS
             var result = await client.SubmitTcvsFormAsync(
-                issueDate: "04/10/2024",
-                symbol: "1234",
-                serial: "12345678",
-                checkAmount: "123.45",
-                rtn: "123456789"
+                issueDate: "12/06/24",
+                symbol: "4045",
+                serial: "57285965",
+                checkAmount: "10.00",
+                rtn: "000000518"
             );
 
             if (result.Success)
