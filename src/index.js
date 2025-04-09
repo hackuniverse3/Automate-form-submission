@@ -2,7 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
 const dotenv = require('dotenv');
-const puppeteer = require('puppeteer');
+const chromium = require('chrome-aws-lambda');
+const puppeteer = require('puppeteer-core');
 
 // Load environment variables
 dotenv.config();
@@ -22,12 +23,17 @@ class TCVSService {
    * @returns Promise with the result of the submission
    */
   async submitForm(formData) {
-    const browser = await puppeteer.launch({
-      headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
+    let browser = null;
 
     try {
+      browser = await puppeteer.launch({
+        args: chromium.args,
+        defaultViewport: chromium.defaultViewport,
+        executablePath: await chromium.executablePath,
+        headless: chromium.headless,
+        ignoreHTTPSErrors: true,
+      });
+      
       const page = await browser.newPage();
       
       // Navigate to the TCVS website
@@ -81,7 +87,9 @@ class TCVSService {
         error: error.message
       };
     } finally {
-      await browser.close();
+      if (browser !== null) {
+        await browser.close();
+      }
     }
   }
 }
