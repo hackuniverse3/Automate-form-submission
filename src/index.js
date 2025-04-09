@@ -24,72 +24,109 @@ class TCVSService {
    */
   async submitForm(formData) {
     let browser = null;
+    let page = null;
 
     try {
-      // Connect to Browserless.io
+      console.log('Connecting to Browserless...');
       const browserWSEndpoint = `wss://chrome.browserless.io?token=${config.browserlessApiKey}`;
       
       browser = await puppeteer.connect({
         browserWSEndpoint,
+        defaultViewport: { width: 1280, height: 800 }
       });
       
-      const page = await browser.newPage();
+      console.log('Creating new page...');
+      page = await browser.newPage();
       
-      // Set viewport
-      await page.setViewport({ width: 1280, height: 800 });
+      // Set a realistic user agent
+      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
+
+      // Log console messages from the page
+      page.on('console', msg => console.log('Page console:', msg.text()));
       
-      // Navigate to the TCVS website
-      await page.goto(config.tcvsUrl, { waitUntil: 'networkidle2' });
+      console.log('Navigating to TCVS website...');
+      await page.goto(config.tcvsUrl, { 
+        waitUntil: 'networkidle2',
+        timeout: 60000
+      });
+
+      console.log('Page loaded, waiting for content...');
       
-      // Wait for form fields to be visible
-      await page.waitForSelector('#issueDateInput', { visible: true });
+      // Wait for the form to be available
+      await page.waitForSelector('form', { timeout: 20000 });
       
-      // Fill in the form fields
-      await page.type('#issueDateInput', formData.issueDate);
-      await page.type('#symbolInput', formData.symbol);
-      await page.type('#serialInput', formData.serial);
-      await page.type('#checkAmountInput', formData.checkAmount);
-      await page.type('#rtnInput', formData.rtn);
+      console.log('Form found, filling fields...');
       
-      // Check reCAPTCHA checkbox (this may require additional handling)
-      // Note: Automating reCAPTCHA is against Google's Terms of Service
-      // This is for demonstration purposes only
-      const recaptchaFrame = await page.waitForSelector('.g-recaptcha iframe');
-      if (recaptchaFrame) {
-        const frameHandle = await recaptchaFrame.contentFrame();
-        if (frameHandle) {
-          await frameHandle.waitForSelector('#recaptcha-anchor', { visible: true });
-          await frameHandle.click('#recaptcha-anchor');
-        }
+      // Use the correct selectors based on our analysis
+      await page.type('#issue_date', formData.issueDate);
+      await page.type('#symbol_number', formData.symbol);
+      await page.type('#serial_number', formData.serial);
+      await page.type('#amount', formData.checkAmount);
+      await page.type('#bank_rtn', formData.rtn);
+      
+      console.log('Form filled, submitting...');
+      
+      // Find and click the submit button
+      const submitButton = await page.$('button[type="submit"]');
+      if (!submitButton) {
+        throw new Error('Could not find submit button');
       }
       
-      // Submit the form
-      await Promise.all([
-        page.waitForNavigation({ waitUntil: 'networkidle2' }),
-        page.click('#submitButton')
-      ]);
+      await submitButton.click();
       
-      // Extract results
+      // Wait for response
+      await page.waitForTimeout(5000);
+      
+      console.log('Form submitted, capturing result...');
+      
+      // Take screenshot for debugging
+      try {
+        await page.screenshot({ path: '/tmp/result-screenshot.png' });
+      } catch (e) {
+        console.log('Could not take screenshot:', e.message);
+      }
+      
+      // Extract result text
       const resultText = await page.evaluate(() => {
-        const resultElement = document.querySelector('.result-container');
-        return resultElement ? resultElement.textContent : null;
+        return document.body.textContent;
       });
       
       return {
         success: true,
         message: 'Form submitted successfully',
         data: {
-          result: resultText
+          result: resultText || 'No specific result text found'
         }
       };
     } catch (error) {
+      console.error('Error in form submission:', error);
+      
+      // Additional error info
+      let errorInfo = {
+        message: error.message,
+        stack: error.stack
+      };
+      
+      // If page exists, try to get current URL and content
+      if (page) {
+        try {
+          errorInfo.currentUrl = await page.url();
+        } catch (e) {
+          console.error('Error getting URL:', e);
+        }
+      }
+      
       return {
         success: false,
         message: 'Failed to submit form',
-        error: error.message
+        error: error.message,
+        details: errorInfo
       };
     } finally {
-      if (browser !== null) {
+      if (page) {
+        await page.close();
+      }
+      if (browser) {
         await browser.close();
       }
     }
@@ -107,6 +144,8 @@ class TCVSController {
    */
   async submitForm(req, res) {
     try {
+      console.log('Received form submission request:', req.body);
+      
       const formData = {
         issueDate: req.body.issueDate,
         symbol: req.body.symbol,
@@ -128,7 +167,10 @@ class TCVSController {
       }
 
       // Submit the form using the service
+      console.log('Starting form submission...');
       const result = await this.tcvsService.submitForm(formData);
+      
+      console.log('Form submission result:', result);
       
       if (result.success) {
         return res.status(200).json(result);
@@ -136,10 +178,12 @@ class TCVSController {
         return res.status(500).json(result);
       }
     } catch (error) {
+      console.error('Unexpected error in controller:', error);
       return res.status(500).json({
         success: false,
         message: 'An unexpected error occurred',
-        error: error.message
+        error: error.message,
+        stack: error.stack
       });
     }
   }
@@ -153,6 +197,12 @@ app.use(cors());
 app.use(express.json());
 app.use(morgan(config.nodeEnv === 'development' ? 'dev' : 'combined'));
 
+// Request logging
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.url}`);
+  next();
+});
+
 // Initialize controller
 const tcvsController = new TCVSController();
 
@@ -161,21 +211,62 @@ const router = express.Router();
 
 // Health check endpoint
 router.get('/health', (req, res) => {
-  res.status(200).json({ status: 'healthy' });
+  res.status(200).json({ 
+    status: 'healthy',
+    environment: config.nodeEnv,
+    targetUrl: config.tcvsUrl 
+  });
 });
 
 // TCVS form submission endpoint
 router.post('/submit', (req, res) => tcvsController.submitForm(req, res));
 
+// Debug endpoint to check site structure
+router.get('/debug', async (req, res) => {
+  try {
+    const tcvsService = new TCVSService();
+    const browser = await puppeteer.connect({
+      browserWSEndpoint: `wss://chrome.browserless.io?token=${config.browserlessApiKey}`,
+    });
+    
+    const page = await browser.newPage();
+    await page.goto(config.tcvsUrl, { waitUntil: 'networkidle2' });
+    
+    const formElements = await page.evaluate(() => {
+      const inputs = Array.from(document.querySelectorAll('input'));
+      const buttons = Array.from(document.querySelectorAll('button, input[type="submit"]'));
+      
+      return {
+        inputs: inputs.map(i => ({ id: i.id, name: i.name, type: i.type })),
+        buttons: buttons.map(b => ({ id: b.id, type: b.type, text: b.innerText || b.value }))
+      };
+    });
+    
+    await browser.close();
+    
+    res.status(200).json({
+      success: true,
+      data: formElements
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Debug failed',
+      error: error.message
+    });
+  }
+});
+
 app.use('/api', router);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  console.error('Unhandled error:', err);
   res.status(500).json({
     success: false,
     message: 'Internal server error',
-    error: config.nodeEnv === 'development' ? err.message : 'Something went wrong'
+    error: config.nodeEnv === 'development' ? err.message : 'Something went wrong',
+    stack: config.nodeEnv === 'development' ? err.stack : undefined
   });
 });
 
