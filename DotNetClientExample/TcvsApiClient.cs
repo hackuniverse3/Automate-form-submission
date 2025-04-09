@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.Windows.Forms; // Add Windows Forms for UI components
 
 namespace TcvsIntegration
 {
@@ -10,26 +11,29 @@ namespace TcvsIntegration
     {
         private readonly HttpClient _httpClient;
         private readonly string _baseUrl;
+        private bool _enableVerification = true; // Flag to enable/disable verification
 
         /// <summary>
         /// Initializes a new instance of the TCVS API client
         /// </summary>
         /// <param name="baseUrl">Base URL of the API. Defaults to the Vercel deployment.</param>
-        public TcvsApiClient(string baseUrl = "http://localhost:3000/api")
+        /// <param name="enableVerification">Whether to show verification dialog before submission</param>
+        public TcvsApiClient(string baseUrl = "https://automate-form-submission.vercel.app/api", bool enableVerification = true)
         {
             _httpClient = new HttpClient();
             _baseUrl = baseUrl;
+            _enableVerification = enableVerification;
         }
 
         /// <summary>
-        /// Submits a form to the Treasury Check Verification System (TCVS)
+        /// Submits a form to the Treasury Check Verification System (TCVS) with user verification
         /// </summary>
         /// <param name="issueDate">Issue date in MM/DD/YYYY format</param>
         /// <param name="symbol">Check symbol (4 digits)</param>
         /// <param name="serial">Check serial number (8 digits)</param>
         /// <param name="checkAmount">Amount of the check (decimal number)</param>
         /// <param name="rtn">Bank routing transit number (9 digits)</param>
-        /// <returns>The response from the TCVS API</returns>
+        /// <returns>The response from the TCVS API or null if user cancelled</returns>
         public async Task<TcvsResponse> SubmitTcvsFormAsync(
             string issueDate,
             string symbol,
@@ -39,6 +43,21 @@ namespace TcvsIntegration
         {
             try
             {
+                // Show verification dialog if enabled
+                if (_enableVerification)
+                {
+                    bool verified = ShowVerificationDialog(issueDate, symbol, serial, checkAmount, rtn);
+                    if (!verified)
+                    {
+                        // User cancelled the verification
+                        return new TcvsResponse
+                        {
+                            Success = false,
+                            Message = "Form submission cancelled by user during verification"
+                        };
+                    }
+                }
+
                 var formData = new
                 {
                     issueDate,
@@ -79,6 +98,31 @@ namespace TcvsIntegration
                     Error = ex.Message
                 };
             }
+        }
+
+        /// <summary>
+        /// Displays a dialog for the user to verify the check information before submission
+        /// </summary>
+        /// <returns>True if the user confirmed, false if cancelled</returns>
+        private bool ShowVerificationDialog(string issueDate, string symbol, string serial, string checkAmount, string rtn)
+        {
+            // Create verification message
+            string message = "Please verify the check information before submission:\n\n" +
+                $"Issue Date: {issueDate}\n" +
+                $"Symbol: {symbol}\n" +
+                $"Serial Number: {serial}\n" +
+                $"Check Amount: ${checkAmount}\n" +
+                $"RTN: {rtn}\n\n" +
+                "Is this information correct?";
+
+            // Show dialog and return result
+            DialogResult result = MessageBox.Show(
+                message,
+                "Verify Check Information",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+
+            return result == DialogResult.Yes;
         }
 
         /// <summary>
@@ -138,39 +182,58 @@ namespace TcvsIntegration
     {
         public static async Task Main(string[] args)
         {
-            // Create client with default URL (Vercel deployment)
-            var client = new TcvsApiClient();
-            
-            // Check API health first
-            var healthCheck = await client.CheckHealthAsync();
-            if (healthCheck.Success)
+            try
             {
-                Console.WriteLine($"API Health Check: {healthCheck.Message}");
-            }
-            else
-            {
-                Console.WriteLine($"API Health Check Failed: {healthCheck.Error}");
-                return;
-            }
+                // Simulate reading data from card reader
+                Console.WriteLine("Simulating card reader scan...");
+                string issueDate = "04/10/2024";
+                string symbol = "1234";
+                string serial = "12345678";
+                string checkAmount = "123.45";
+                string rtn = "123456789";
+                Console.WriteLine("Check data read successfully.");
 
-            // Submit form to TCVS
-            var result = await client.SubmitTcvsFormAsync(
-                issueDate: "12/06/24",
-                symbol: "4045",
-                serial: "57285965",
-                checkAmount: "10.00",
-                rtn: "000000518"
-            );
+                // Create client with default URL (Vercel deployment) and verification enabled
+                var client = new TcvsApiClient(enableVerification: true);
+                
+                // Check API health first
+                var healthCheck = await client.CheckHealthAsync();
+                if (!healthCheck.Success)
+                {
+                    Console.WriteLine($"API Health Check Failed: {healthCheck.Error}");
+                    Console.WriteLine("Press any key to exit...");
+                    Console.ReadKey();
+                    return;
+                }
 
-            if (result.Success)
-            {
-                Console.WriteLine($"Form submission successful: {result.Message}");
-                Console.WriteLine($"Result URL: {result.Data?.CurrentUrl}");
-                Console.WriteLine($"Result content: {result.Data?.Result}");
+                // Submit form to TCVS (will show verification dialog)
+                var result = await client.SubmitTcvsFormAsync(
+                    issueDate: issueDate,
+                    symbol: symbol,
+                    serial: serial,
+                    checkAmount: checkAmount,
+                    rtn: rtn
+                );
+
+                if (result.Success)
+                {
+                    Console.WriteLine($"Form submission successful: {result.Message}");
+                    Console.WriteLine($"Result URL: {result.Data?.CurrentUrl}");
+                    Console.WriteLine($"Result content: {result.Data?.Result}");
+                }
+                else
+                {
+                    Console.WriteLine($"Form submission failed: {result.Error ?? result.Message}");
+                }
+
+                Console.WriteLine("Press any key to exit...");
+                Console.ReadKey();
             }
-            else
+            catch (Exception ex)
             {
-                Console.WriteLine($"Form submission failed: {result.Error}");
+                Console.WriteLine($"An unexpected error occurred: {ex.Message}");
+                Console.WriteLine("Press any key to exit...");
+                Console.ReadKey();
             }
         }
     }

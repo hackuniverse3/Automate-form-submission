@@ -148,9 +148,17 @@ ISC
 
 ## .NET Integration
 
-A .NET client library is included in the `DotNetClientExample` directory for easy integration with C# applications.
+A .NET client library is included in the `DotNetClientExample` directory for easy integration with C# applications. The client includes a verification step to allow users to confirm the check information before submission.
 
-### Usage Example
+### Features
+
+- Easy API integration with .NET applications
+- Built-in verification step for user confirmation
+- Support for card reader integration
+- Windows Forms UI for interactive verification
+- Error handling and logging
+
+### Console Application Usage
 
 ```csharp
 // Create client with default URL (Vercel deployment)
@@ -163,7 +171,7 @@ if (healthCheck.Success)
     Console.WriteLine($"API Health Check: {healthCheck.Message}");
 }
 
-// Submit form to TCVS
+// Submit form to TCVS with verification
 var result = await client.SubmitTcvsFormAsync(
     issueDate: "04/10/2024",
     symbol: "1234",
@@ -184,9 +192,27 @@ else
 }
 ```
 
+### Windows Forms Application
+
+A fully functional Windows Forms application is included to demonstrate how to integrate with a card reader and provide a user-friendly verification interface.
+
+#### Features:
+- User interface for check verification
+- Card reader simulation (can be replaced with actual card reader integration)
+- Verification step before submission to TCVS
+- Detailed result display
+- Error handling and user feedback
+
+To run the Windows Forms application:
+```
+cd DotNetClientExample
+dotnet build
+dotnet run
+```
+
 ### TcvsApiClient Methods
 
 | Method | Description |
 |--------|-------------|
-| `SubmitTcvsFormAsync` | Submits a form to the TCVS system |
+| `SubmitTcvsFormAsync` | Submits a form to the TCVS system with optional verification |
 | `CheckHealthAsync` | Checks the health status of the API | 
