@@ -2,8 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
 const dotenv = require('dotenv');
-const chromium = require('chrome-aws-lambda');
-const puppeteer = require('puppeteer-core');
+const puppeteer = require('puppeteer');
 
 // Load environment variables
 dotenv.config();
@@ -26,12 +25,19 @@ class TCVSService {
     let browser = null;
 
     try {
+      // Launch browser with specific options for Vercel serverless environment
       browser = await puppeteer.launch({
-        args: chromium.args,
-        defaultViewport: chromium.defaultViewport,
-        executablePath: await chromium.executablePath,
-        headless: chromium.headless,
-        ignoreHTTPSErrors: true,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-accelerated-2d-canvas',
+          '--no-first-run',
+          '--no-zygote',
+          '--single-process',
+          '--disable-gpu'
+        ],
+        headless: "new"
       });
       
       const page = await browser.newPage();
