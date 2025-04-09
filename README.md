@@ -1,58 +1,49 @@
 # TCVS Form Automation API
 
-A headless API that automates form submissions on the [Treasury Check Verification System (TCVS)](https://tcvs.fiscal.treasury.gov/) website using Puppeteer.
+This API automates the submission of forms to the Treasury Check Verification System (TCVS) at the U.S. Department of the Treasury. It uses Puppeteer and Browserless.io to programmatically fill and submit the verification form.
 
-## Prerequisites
+## Features
 
-- Node.js (v14 or higher)
-- npm
+- Automated form submission to TCVS
+- RESTful API endpoints
+- Browser automation with Puppeteer
+- Cloud-based browser execution via Browserless.io
+- Error handling and logging
+- Deployed on Vercel
+- .NET client library for easy integration
 
-## Installation
+## API Endpoints
 
-1. Clone this repository
-2. Install dependencies:
-   ```
-   npm install
-   ```
-3. Configure environment variables in `.env` file:
-   ```
-   PORT=3000
-   NODE_ENV=development
-   TCVS_URL=https://tcvs.fiscal.treasury.gov/
-   ```
-
-## Usage
-
-### Starting the API
-
-```
-npm start
-```
-
-The API will run on http://localhost:3000 (or the port specified in your .env file).
-
-### API Endpoints
-
-#### Health Check
+### Health Check
 ```
 GET /api/health
 ```
+Returns the service status and configuration information.
 
-#### Submit TCVS Form
+### Form Submission
 ```
 POST /api/submit
 ```
+Submits the TCVS form with the provided data.
 
-Request body:
+Request Body:
 ```json
 {
-  "issueDate": "12/06/24",
-  "symbol": "4045",
-  "serial": "57285965",
-  "checkAmount": "10.00",
-  "rtn": "000000518"
+  "issueDate": "MM/DD/YYYY",
+  "symbol": "1234",
+  "serial": "12345678",
+  "checkAmount": "123.45",
+  "rtn": "123456789"
 }
 ```
+
+| Field | Description | Format |
+|-------|-------------|--------|
+| issueDate | The issue date of the check | MM/DD/YYYY |
+| symbol | The check symbol number | 4 digits |
+| serial | The check serial number | 8 digits |
+| checkAmount | The amount of the check | Decimal number |
+| rtn | Bank routing transit number | 9 digits |
 
 Response:
 ```json
@@ -60,32 +51,132 @@ Response:
   "success": true,
   "message": "Form submitted successfully",
   "data": {
-    "result": "..." // Result from the TCVS form submission
+    "currentUrl": "https://tcvs.fiscal.treasury.gov/result",
+    "result": "The verification result text from the page"
   }
 }
 ```
 
+### Debug Endpoint
+```
+GET /api/debug
+```
+Returns information about the form elements on the TCVS website. Useful for troubleshooting.
+
+## Deployment
+
+This API is deployed on Vercel at:
+```
+https://automate-form-submission.vercel.app/
+```
+
+### Environment Variables
+
+The following environment variables need to be set in your Vercel deployment:
+
+- `PORT`: Server port (default: 3000)
+- `NODE_ENV`: Environment (development or production)
+- `TCVS_URL`: URL of the TCVS website
+- `BROWSERLESS_API_KEY`: Your Browserless.io API key
+
+## Development
+
+### Prerequisites
+
+- Node.js 22.x
+- Browserless.io account and API key
+
+### Installation
+
+1. Clone the repository
+```bash
+git clone https://github.com/yourusername/automate-form-submission.git
+cd automate-form-submission
+```
+
+2. Install dependencies
+```bash
+npm install
+```
+
+3. Create a `.env` file in the root directory with the following content:
+```
+PORT=3000
+NODE_ENV=development
+TCVS_URL=https://tcvs.fiscal.treasury.gov/
+BROWSERLESS_API_KEY=your_browserless_api_key
+```
+
+4. Start the server
+```bash
+npm start
+```
+
+### Testing with Postman
+
+1. Import the provided Postman collection (if available)
+2. Or create a new request:
+   - Method: POST
+   - URL: `http://localhost:3000/api/submit` (local) or `https://automate-form-submission.vercel.app/api/submit` (production)
+   - Headers: `Content-Type: application/json`
+   - Body (raw JSON):
+```json
+{
+  "issueDate": "04/10/2024",
+  "symbol": "1234",
+  "serial": "12345678",
+  "checkAmount": "123.45",
+  "rtn": "123456789"
+}
+```
+
+## Limitations
+
+- The service is subject to Vercel's serverless function timeout limits (10 seconds on the free plan)
+- Browser automation may be detected and blocked by anti-bot measures on some websites
+- reCAPTCHA automation is not fully implemented as it's against Google's Terms of Service
+
+## Troubleshooting
+
+- If you encounter the error `Waiting for selector failed`, check if the website structure has changed
+- For timeout errors, consider upgrading to Vercel Pro or using a different hosting provider
+- Verify your Browserless.io API key is correct and has sufficient credits
+
+## License
+
+ISC
+
 ## .NET Integration
 
-A sample C# client is provided in the `DotNetClientExample` directory.
+A .NET client library is included in the `DotNetClientExample` directory for easy integration with C# applications.
 
-Example usage:
+### Usage Example
 
 ```csharp
+// Create client with default URL (Vercel deployment)
 var client = new TcvsApiClient();
-            
+
+// Check API health
+var healthCheck = await client.CheckHealthAsync();
+if (healthCheck.Success)
+{
+    Console.WriteLine($"API Health Check: {healthCheck.Message}");
+}
+
+// Submit form to TCVS
 var result = await client.SubmitTcvsFormAsync(
-    issueDate: "12/06/24",
-    symbol: "4045",
-    serial: "57285965",
-    checkAmount: "10.00",
-    rtn: "000000518"
+    issueDate: "04/10/2024",
+    symbol: "1234",
+    serial: "12345678",
+    checkAmount: "123.45",
+    rtn: "123456789"
 );
 
 if (result.Success)
 {
     Console.WriteLine($"Form submission successful: {result.Message}");
-    Console.WriteLine($"Result: {result.Data}");
+    Console.WriteLine($"Result URL: {result.Data?.CurrentUrl}");
+    Console.WriteLine($"Result content: {result.Data?.Result}");
 }
 else
 {
@@ -93,11 +184,9 @@ else
 }
 ```
 
-## Important Notes
+### TcvsApiClient Methods
 
-- **reCAPTCHA Notice**: This code attempts to automate reCAPTCHA which is against Google's Terms of Service. This is provided for educational purposes only.
-- **Production Considerations**: In a production environment, consider:
-  - 2Captcha or similar services (check legal implications)
-  - Human-in-the-loop solutions for CAPTCHA solving
-  - Server-side validation and rate limiting
-- **Puppeteer Configuration**: Adjust browser launch options in `src/index.js` as needed for your environment. 
+| Method | Description |
+|--------|-------------|
+| `SubmitTcvsFormAsync` | Submits a form to the TCVS system |
+| `CheckHealthAsync` | Checks the health status of the API | 
