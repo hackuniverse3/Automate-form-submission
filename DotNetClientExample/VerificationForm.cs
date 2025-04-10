@@ -149,11 +149,11 @@ namespace TcvsIntegration
                 {
                     timer.Stop();
                     // Populate fields with simulated scan data
-                    txtIssueDate.Text = "04/10/2024";
-                    txtSymbol.Text = "1234";
-                    txtSerial.Text = "12345678";
-                    txtCheckAmount.Text = "123.45";
-                    txtRTN.Text = "123456789";
+                    txtIssueDate.Text = "12/06/24";
+                    txtSymbol.Text = "4045";
+                    txtSerial.Text = "57285965";
+                    txtCheckAmount.Text = "10.00";
+                    txtRTN.Text = "000000518";
 
                     lblStatus.Text = "Check scanned successfully. Please verify the information and click 'Verify & Submit'.";
                     lblStatus.ForeColor = Color.Green;
@@ -210,14 +210,67 @@ namespace TcvsIntegration
 
                 if (response.Success)
                 {
-                    lblStatus.Text = $"Check verified successfully!\nResult: {response.Data?.Result}";
-                    lblStatus.ForeColor = Color.Green;
+                    // Set status color based on verification result
+                    lblStatus.ForeColor = response.Data?.Verified == true ? Color.Green : Color.Red;
+                    
+                    // Set status text
+                    lblStatus.Text = response.Data?.Verified == true 
+                        ? "✓ Check verified successfully!" 
+                        : "✗ Check verification failed!";
+
+                    // Display detailed verification results
+                    var resultMessage = new System.Text.StringBuilder();
+                    
+                    // Main verification status
+                    resultMessage.AppendLine($"Verification Result: {(response.Data?.Verified == true ? "VERIFIED" : "NOT VERIFIED")}");
+                    resultMessage.AppendLine();
+                    
+                    // Show specific status if available
+                    if (!string.IsNullOrEmpty(response.Data?.Status))
+                    {
+                        resultMessage.AppendLine($"Status: {response.Data.Status}");
+                        resultMessage.AppendLine();
+                    }
+                    
+                    // Show details
+                    if (response.Data?.Details != null)
+                    {
+                        if (response.Data.Details is Dictionary<string, string> detailsDict)
+                        {
+                            resultMessage.AppendLine("Check Details:");
+                            foreach (var detail in detailsDict)
+                            {
+                                resultMessage.AppendLine($"  {detail.Key}: {detail.Value}");
+                            }
+                        }
+                        else
+                        {
+                            resultMessage.AppendLine($"Details: {response.Data.Details}");
+                        }
+                        resultMessage.AppendLine();
+                    }
+                    
+                    // Full result text
+                    if (!string.IsNullOrEmpty(response.Data?.FullText))
+                    {
+                        resultMessage.AppendLine("Full Result:");
+                        resultMessage.AppendLine(response.Data.FullText);
+                    }
+                    
+                    // Display the verification result
+                    var messageIcon = response.Data?.Verified == true 
+                        ? MessageBoxIcon.Information 
+                        : MessageBoxIcon.Warning;
+                        
+                    var messageTitle = response.Data?.Verified == true 
+                        ? "Check Verification Successful" 
+                        : "Check Verification Failed";
 
                     MessageBox.Show(
-                        $"Check verification successful.\n\nResult: {response.Data?.Result}",
-                        "Success",
+                        resultMessage.ToString(),
+                        messageTitle,
                         MessageBoxButtons.OK,
-                        MessageBoxIcon.Information);
+                        messageIcon);
                 }
                 else
                 {

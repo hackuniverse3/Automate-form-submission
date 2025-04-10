@@ -1,19 +1,23 @@
 {
-  "name": "automatic",
+  "name": "tcvs-form-automation",
   "version": "1.0.0",
+  "description": "API for automating form submission to TCVS",
   "main": "src/index.js",
   "scripts": {
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
   "dependencies": {
     "cors": "^2.8.5",
-    "dotenv": "^16.4.7",
-    "express": "^5.1.0",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
     "morgan": "^1.10.0",
-    "puppeteer-core": "^22.0.0"
+    "puppeteer": "^21.6.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
   }
 }

@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Forms; // Add Windows Forms for UI components
+using System.Collections.Generic;
 
 namespace TcvsIntegration
 {
@@ -18,7 +19,7 @@ namespace TcvsIntegration
         /// </summary>
         /// <param name="baseUrl">Base URL of the API. Defaults to the Vercel deployment.</param>
         /// <param name="enableVerification">Whether to show verification dialog before submission</param>
-        public TcvsApiClient(string baseUrl = "https://automate-form-submission.vercel.app/api", bool enableVerification = true)
+        public TcvsApiClient(string baseUrl = "http://localhost:3000/api", bool enableVerification = true)
         {
             _httpClient = new HttpClient();
             _baseUrl = baseUrl;
@@ -173,8 +174,80 @@ namespace TcvsIntegration
     /// </summary>
     public class TcvsResponseData
     {
+        /// <summary>
+        /// The URL of the result page
+        /// </summary>
         public string CurrentUrl { get; set; }
-        public string Result { get; set; }
+        
+        /// <summary>
+        /// Whether the check was verified successfully
+        /// </summary>
+        public bool Verified { get; set; }
+        
+        /// <summary>
+        /// The verification status text (e.g., "Check Verified" or "No Match")
+        /// </summary>
+        public string Status { get; set; }
+        
+        /// <summary>
+        /// Additional details about the verification (can be a string or dictionary)
+        /// </summary>
+        public object Details { get; set; }
+        
+        /// <summary>
+        /// The full text of the verification result
+        /// </summary>
+        public string FullText { get; set; }
+        
+        /// <summary>
+        /// The type of alert (e.g., "alert-danger", "alert-success")
+        /// </summary>
+        public string AlertType { get; set; }
+
+        /// <summary>
+        /// Gets a user-friendly display of the verification result
+        /// </summary>
+        public override string ToString()
+        {
+            var sb = new System.Text.StringBuilder();
+            
+            // First line shows verification status
+            sb.AppendLine($"Verification Result: {(Verified ? "VERIFIED" : "NOT VERIFIED")}");
+            sb.AppendLine();
+            
+            // Show the specific status if available
+            if (!string.IsNullOrEmpty(Status))
+            {
+                sb.AppendLine($"Status: {Status}");
+            }
+            
+            // Show details based on type
+            if (Details != null)
+            {
+                if (Details is Dictionary<string, string> detailsDict)
+                {
+                    sb.AppendLine("Details:");
+                    foreach (var detail in detailsDict)
+                    {
+                        sb.AppendLine($"  {detail.Key}: {detail.Value}");
+                    }
+                }
+                else
+                {
+                    sb.AppendLine($"Details: {Details}");
+                }
+                sb.AppendLine();
+            }
+            
+            // Show the full text if available
+            if (!string.IsNullOrEmpty(FullText))
+            {
+                sb.AppendLine("Full Result:");
+                sb.AppendLine(FullText);
+            }
+            
+            return sb.ToString();
+        }
     }
 
     // Example usage
@@ -186,11 +259,11 @@ namespace TcvsIntegration
             {
                 // Simulate reading data from card reader
                 Console.WriteLine("Simulating card reader scan...");
-                string issueDate = "04/10/2024";
-                string symbol = "1234";
-                string serial = "12345678";
-                string checkAmount = "123.45";
-                string rtn = "123456789";
+                string issueDate = "12/06/24";
+                string symbol = "4045";
+                string serial = "57285965";
+                string checkAmount = "10.00";
+                string rtn = "000000518";
                 Console.WriteLine("Check data read successfully.");
 
                 // Create client with default URL (Vercel deployment) and verification enabled
@@ -219,7 +292,7 @@ namespace TcvsIntegration
                 {
                     Console.WriteLine($"Form submission successful: {result.Message}");
                     Console.WriteLine($"Result URL: {result.Data?.CurrentUrl}");
-                    Console.WriteLine($"Result content: {result.Data?.Result}");
+                    Console.WriteLine($"Result content: {result.Data?.ResultText}");
                 }
                 else
                 {

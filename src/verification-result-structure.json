@@ -1,0 +1,98 @@
+{
+  "success": {
+    "verified": true,
+    "status": "Check Verified",
+    "details": "Status: Paid",
+    "fullText": "Check Verified. Status: Paid",
+    "alertType": "alert-success",
+    "className": "alert-success",
+    "submissionInfo": {
+      "formData": {
+        "issueDate": "12/25/23",
+        "symbol": "1234",
+        "serial": "56789012",
+        "checkAmount": "100.00",
+        "rtn": "000000518"
+      },
+      "hasResults": true
+    }
+  },
+  "noMatch": {
+    "verified": false,
+    "status": "No Match",
+    "details": "The check information you entered does not match our records.",
+    "fullText": "No Match. The check information you entered does not match our records.",
+    "alertType": "alert-danger",
+    "className": "alert-danger",
+    "submissionInfo": {
+      "formData": {
+        "issueDate": "12/25/23",
+        "symbol": "1234",
+        "serial": "56789012",
+        "checkAmount": "100.00",
+        "rtn": "000000518"
+      },
+      "hasResults": true
+    }
+  },
+  "serverError": {
+    "verified": false,
+    "status": "Error",
+    "details": "Server error fetching results. Please try again in a minute.",
+    "fullText": "Server error fetching results. Please try again in a minute.",
+    "alertType": "alert-warning",
+    "className": "alert-warning", 
+    "isServerError": true,
+    "treasuryServerError": true,
+    "submissionInfo": {
+      "formData": {
+        "issueDate": "12/25/23",
+        "symbol": "1234",
+        "serial": "56789012",
+        "checkAmount": "100.00",
+        "rtn": "000000518"
+      },
+      "hasResults": false
+    }
+  },
+  "simulatedSuccess": {
+    "verified": true,
+    "status": "Check Verified (Simulated)",
+    "details": "Status: Paid (Simulated)",
+    "fullText": "Check Verified. Status: Paid (Simulated)",
+    "alertType": "alert-success",
+    "className": "alert-success",
+    "simulated": true,
+    "treasuryServerError": true,
+    "submissionInfo": {
+      "formData": {
+        "issueDate": "12/25/23",
+        "symbol": "1234",
+        "serial": "56789012",
+        "checkAmount": "100.00",
+        "rtn": "000000518"
+      },
+      "hasResults": true
+    }
+  },
+  "simulatedNoMatch": {
+    "verified": false,
+    "status": "No Match (Simulated)",
+    "details": "The check information does not match our records (Simulated)",
+    "fullText": "No Match. The check information does not match our records (Simulated)",
+    "alertType": "alert-danger",
+    "className": "alert-danger",
+    "simulated": true,
+    "treasuryServerError": true,
+    "submissionInfo": {
+      "formData": {
+        "issueDate": "12/25/23",
+        "symbol": "1234",
+        "serial": "56789012",
+        "checkAmount": "100.00",
+        "rtn": "000000518"
+      },
+      "hasResults": true
+    }
+  }
+} 

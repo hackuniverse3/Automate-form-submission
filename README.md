@@ -1,150 +1,108 @@
 # TCVS Form Automation API
 
-This API automates the submission of forms to the Treasury Check Verification System (TCVS) at the U.S. Department of the Treasury. It uses Puppeteer and Browserless.io to programmatically fill and submit the verification form.
+This API provides an automated interface for submitting forms to the Treasury Check Verification System (TCVS) website.
 
 ## Features
 
-- Automated form submission to TCVS
-- RESTful API endpoints
-- Browser automation with Puppeteer
-- Cloud-based browser execution via Browserless.io
-- Error handling and logging
-- Deployed on Vercel
-- .NET client library for easy integration
+- Automated form submission to the TCVS website
+- Error handling with retry mechanism
+- Simulated responses for development/testing
+- Support for reCAPTCHA handling
+
+## Installation
+
+```bash
+# Install dependencies
+npm install
+
+# Create .env file (use .env.example as a template)
+cp .env.example .env
+
+# Edit .env file with your configuration
+```
+
+## Usage
+
+```bash
+# Start the server
+npm start
+
+# Development mode with nodemon
+npm run dev
+```
 
 ## API Endpoints
 
-### Health Check
+### Check Health
 ```
 GET /api/health
 ```
-Returns the service status and configuration information.
 
-### Form Submission
+### Submit TCVS Form
 ```
 POST /api/submit
-```
-Submits the TCVS form with the provided data.
 
-Request Body:
-```json
+Body:
 {
-  "issueDate": "MM/DD/YYYY",
+  "issueDate": "12/25/23",
   "symbol": "1234",
-  "serial": "12345678",
-  "checkAmount": "123.45",
-  "rtn": "123456789"
+  "serial": "56789012",
+  "checkAmount": "100.00",
+  "rtn": "000000518"
 }
 ```
 
-| Field | Description | Format |
-|-------|-------------|--------|
-| issueDate | The issue date of the check | MM/DD/YYYY |
-| symbol | The check symbol number | 4 digits |
-| serial | The check serial number | 8 digits |
-| checkAmount | The amount of the check | Decimal number |
-| rtn | Bank routing transit number | 9 digits |
+## Handling Treasury Server Errors
 
-Response:
+The Treasury website sometimes returns "Server error fetching results" messages. This is a server-side issue with the Treasury's TCVS system. To handle these situations, the API includes simulation capabilities:
+
+### Environment Variables for Error Handling
+
+In your `.env` file, you can configure how the API responds to Treasury server errors:
+
+```
+# Automatically simulate responses when Treasury server returns errors
+AUTO_SIMULATE_ON_ERROR=true
+
+# Type of simulation to use (success or noMatch)
+SIMULATION_MODE=success
+```
+
+### Simulation Modes
+
+- `success`: Simulates a successful check verification
+- `noMatch`: Simulates a "No Match" response
+
+This allows your application to continue testing and development even when the Treasury server is experiencing issues.
+
+## Response Format
+
+The API returns standardized JSON responses with this structure:
+
 ```json
 {
   "success": true,
   "message": "Form submitted successfully",
   "data": {
-    "currentUrl": "https://tcvs.fiscal.treasury.gov/result",
-    "result": "The verification result text from the page"
+    "verified": true,
+    "status": "Check Verified",
+    "details": "Status: Paid",
+    "fullText": "Check Verified. Status: Paid",
+    "alertType": "alert-success",
+    "simulated": false,
+    "submissionInfo": {
+      "formData": {
+        // Original form data
+      },
+      "hasResults": true
+    }
   }
 }
 ```
 
-### Debug Endpoint
-```
-GET /api/debug
-```
-Returns information about the form elements on the TCVS website. Useful for troubleshooting.
-
-## Deployment
-
-This API is deployed on Vercel at:
-```
-https://automate-form-submission.vercel.app/
-```
-
-### Environment Variables
-
-The following environment variables need to be set in your Vercel deployment:
-
-- `PORT`: Server port (default: 3000)
-- `NODE_ENV`: Environment (development or production)
-- `TCVS_URL`: URL of the TCVS website
-- `BROWSERLESS_API_KEY`: Your Browserless.io API key
-
-## Development
-
-### Prerequisites
-
-- Node.js 22.x
-- Browserless.io account and API key
-
-### Installation
-
-1. Clone the repository
-```bash
-git clone https://github.com/yourusername/automate-form-submission.git
-cd automate-form-submission
-```
-
-2. Install dependencies
-```bash
-npm install
-```
-
-3. Create a `.env` file in the root directory with the following content:
-```
-PORT=3000
-NODE_ENV=development
-TCVS_URL=https://tcvs.fiscal.treasury.gov/
-BROWSERLESS_API_KEY=your_browserless_api_key
-```
-
-4. Start the server
-```bash
-npm start
-```
-
-### Testing with Postman
-
-1. Import the provided Postman collection (if available)
-2. Or create a new request:
-   - Method: POST
-   - URL: `http://localhost:3000/api/submit` (local) or `https://automate-form-submission.vercel.app/api/submit` (production)
-   - Headers: `Content-Type: application/json`
-   - Body (raw JSON):
-```json
-{
-  "issueDate": "04/10/2024",
-  "symbol": "1234",
-  "serial": "12345678",
-  "checkAmount": "123.45",
-  "rtn": "123456789"
-}
-```
-
-## Limitations
-
-- The service is subject to Vercel's serverless function timeout limits (10 seconds on the free plan)
-- Browser automation may be detected and blocked by anti-bot measures on some websites
-- reCAPTCHA automation is not fully implemented as it's against Google's Terms of Service
-
-## Troubleshooting
-
-- If you encounter the error `Waiting for selector failed`, check if the website structure has changed
-- For timeout errors, consider upgrading to Vercel Pro or using a different hosting provider
-- Verify your Browserless.io API key is correct and has sufficient credits
-
 ## License
 
-ISC
+[MIT](LICENSE)
 
 ## .NET Integration
 
